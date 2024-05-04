@@ -86,5 +86,33 @@ fn main() {
     scene.camera.rotate(0.0, 0.0);
     let render = scene.render(WIDTH, HEIGHT);
     render.to_png(WIDTH, HEIGHT, "renders/output2");
+
     println!("{scene:?}");
+
+    let mut scene = Scene::empty();
+    let mut object1 = Object::new(
+        Vec3::new(-1.0, 0.0, -4.0),
+        Quat::identity(),
+        Vec3::new(1.0, 1.0, 1.0),
+        Shape::Sphere,
+    );
+    object1.fragment_shader = Rc::new(|point| Vec3::new(1.0, 0.0, 0.0));
+    let mut object2 = Object::new(
+        Vec3::new(1.0, 0.0, -4.0),
+        Quat::rot_y(0.5),
+        Vec3::new(1.0, 1.0, 1.0),
+        Shape::Sphere,
+    );
+    object2.fragment_shader = Rc::new(|point| Vec3::new(0.0, 0.0, 1.0));
+    scene.scene = TreeNode::Node(ObjectTree {
+        operation: scene::Operation::SmoothUnion(2.0),
+        left: Box::new(TreeNode::Leaf(object1)),
+        right: Box::new(TreeNode::Leaf(object2)),
+    });
+
+    scene.camera.set_aspect_ratio(WIDTH, HEIGHT);
+    scene.camera.position = Vec3::new(0.0, 0.0, 1.0);
+    scene.camera.rotate(0.0, 0.0);
+    let render = scene.render(WIDTH, HEIGHT);
+    render.to_png(WIDTH, HEIGHT, "renders/output3");
 }

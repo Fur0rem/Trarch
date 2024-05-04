@@ -329,13 +329,21 @@ impl Scene {
                         let h = (k - (left_dist - right_dist).abs()).max(0.0) / k;
                         let new_min = left_dist.min(right_dist) - h * h * k * (1.0 / 5.0);
                         //mix between the two colours
+
+                        let mean_col = (left_col + right_col) / 2.0;
+
                         let how_close_to_left =
-                            (left_dist - new_min) / (left_dist - right_dist).abs();
+                            ((left_dist - new_min) / (left_dist - right_dist).abs()).min(1.0);
                         //println!("{}", how_close_to_left);
                         let how_close_to_right = 1.0 - how_close_to_left;
 
+                        if (left_dist - right_dist).abs() < 0.01 {
+                            println!("dist : {} {}", left_dist, right_dist);
+                            println!("close : {} {}", how_close_to_left, how_close_to_right);
+                            return (new_min, mean_col);
+                        }
+
                         // mix between the two colours with k as the factor
-                        let mean_col = (left_col + right_col) / 2.0;
                         let col = left_col * how_close_to_right + right_col * how_close_to_left;
                         let col = mean_col * (h) + col * (1.0 - h);
 
