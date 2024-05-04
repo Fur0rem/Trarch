@@ -136,7 +136,7 @@ impl Render {
                 let g = (og * 255.0).round() as u8;
                 let b = (ob * 255.0).round() as u8;
                 let occ = (occl * 255.0).round() as u8;
-                let depthu = 255 - (depth / 5.0 * 255.0).round() as u8;
+                let depthu = 255 - (depth / 10.0 * 255.0).round() as u8;
                 let mind_powed = (1.0 - mind).powf(25.0);
                 let mind = 255 - (mind / 5.0 * 205.0).round() as u8;
 
