@@ -8,7 +8,7 @@ pub struct Object {
     pub position: Vec3,
     pub rotation: Quat,
     pub scale: Vec3,
-    pub inflate: f32,
+    pub inflate: f64,
     pub fragment_shader: Rc<dyn Fn(Vec3) -> Vec3>,
     pub vertex_shader: Rc<dyn Fn(Vec3) -> Vec3>,
 }
@@ -41,7 +41,7 @@ impl Debug for Object {
 pub enum Shape {
     Sphere,
     Cube,
-    Mandelbulb { iterations: u32, power: f32 },
+    Mandelbulb { iterations: u32, power: f64 },
 }
 
 impl Object {
@@ -57,7 +57,7 @@ impl Object {
         }
     }
 
-    pub fn distance(&self, point: Vec3) -> f32 {
+    pub fn distance(&self, point: Vec3) -> f64 {
         // translate
         let point = (point - self.position);
         // rotate
@@ -118,7 +118,7 @@ impl Object {
         self.vertex_shader = vertex_shader;
     }
 
-    pub fn set_inflate(&mut self, inflate: f32) {
+    pub fn set_inflate(&mut self, inflate: f64) {
         self.inflate = inflate;
     }
 }

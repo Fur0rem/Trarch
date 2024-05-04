@@ -1,5 +1,6 @@
 Ray marcher project
 
 # Fixes to do:
-Fix stereographic projection
-Fix weird bug where objects are cut off
+Stereographic projection
+Weird bug where objects are cut off
+Glow not scaling with object scale

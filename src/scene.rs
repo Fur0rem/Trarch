@@ -11,7 +11,7 @@ use image::RgbaImage;
     pub objects: Vec<Object>,
 }
 
-pub fn smooth_min(a: f32, b: f32, k: f32) -> f32 {
+pub fn smooth_min(a: f64, b: f64, k: f64) -> f64 {
     if k < 1e-5 {
         return a.min(b);
     }
@@ -26,11 +26,11 @@ impl Scene {
         Scene { camera, objects }
     }
 
-    pub fn distance(&self, point: Vec3) -> f32 {
+    pub fn distance(&self, point: Vec3) -> f64 {
         self.objects
             .iter()
             .map(|object| object.distance(point))
-            .fold(f32::INFINITY, f32::min)
+            .fold(f64::INFINITY, f64::min)
     }
 
     pub fn add_object(&mut self, object: Object) {
@@ -39,12 +39,12 @@ impl Scene {
 }
 
 pub struct RenderImage {
-    pub pixels: Vec<Vec<(f32, f32, f32, f32)>>,
+    pub pixels: Vec<Vec<(f64, f64, f64, f64)>>,
 }
 
 pub struct Render {
-    pub colours: Vec<Vec<(f32, f32, f32, f32)>>,
-    pub ambient: Vec<Vec<(f32, f32, f32, f32)>>,
+    pub colours: Vec<Vec<(f64, f64, f64, f64)>>,
+    pub ambient: Vec<Vec<(f64, f64, f64, f64)>>,
 }
 
 impl Scene {
@@ -54,8 +54,8 @@ impl Scene {
 
         for py in 0..height {
             for px in 0..width {
-                let x = px as f32 / width as f32;
-                let y = py as f32 / height as f32;
+                let x = px as f64 / width as f64;
+                let y = py as f64 / height as f64;
 
                 let ray = self.camera.ray(x, y);
                 let mut t = 0.0;
@@ -81,7 +81,7 @@ impl Scene {
                     }
                 }
 
-                let occ = 1.0 - (distance / 1000.0).min(1.0) - (iterations as f32 / 25.0).min(1.0);
+                let occ = 1.0 - (distance / 1000.0).min(1.0) - (iterations as f64 / 25.0).min(1.0);
                 let color = if distance < 0.001 {
                     closest_shape.color
                 } else {
@@ -105,7 +105,7 @@ impl Render {
         for x in 0..width {
             for y in 0..height {
                 let (r, g, b, _) = self.colour[y as usize][x as usize];
-                let o = self.occlusion[y as usize][x as usize];
+                let o = self.steps[y as usize][x as usize];
                 let r = (r * o * 255.0).round() as u8;
                 let g = (g * o * 255.0).round() as u8;
                 let b = (b * o * 255.0).round() as u8;
@@ -123,37 +123,54 @@ impl Render {
         let mut colours = RgbaImage::new(width, height);
         let mut ambient = RgbaImage::new(width, height);
         let mut depthi = RgbaImage::new(width, height);
+        let mut m = RgbaImage::new(width, height);
 
         for x in 0..width {
             for y in 0..height {
-                let (r, g, b, _) = self.colour[y as usize][x as usize];
-                let occ = self.occlusion[y as usize][x as usize];
+                let (or, og, ob, _) = self.colour[y as usize][x as usize];
+                let occl = self.steps[y as usize][x as usize];
                 let depth = self.depth[y as usize][x as usize];
+                let mind = self.min_distance[y as usize][x as usize];
 
-                let r = (r * 255.0).round() as u8;
-                let g = (g * 255.0).round() as u8;
-                let b = (b * 255.0).round() as u8;
-                let occ = (occ * 255.0).round() as u8;
-                let depth = 255 - (depth / 5.0 * 255.0).round() as u8;
+                let r = (or * 255.0).round() as u8;
+                let g = (og * 255.0).round() as u8;
+                let b = (ob * 255.0).round() as u8;
+                let occ = (occl * 255.0).round() as u8;
+                let depthu = 255 - (depth / 5.0 * 255.0).round() as u8;
+                let mind_powed = (1.0 - mind).powf(25.0);
+                let mind = 255 - (mind / 5.0 * 205.0).round() as u8;
 
+                m.put_pixel(x, y, image::Rgba([mind, mind, mind, 255]));
                 colours.put_pixel(x, y, image::Rgba([r, g, b, 255]));
                 ambient.put_pixel(x, y, image::Rgba([occ, occ, occ, 255]));
-                depthi.put_pixel(x, y, image::Rgba([depth, depth, depth, 255]));
+                depthi.put_pixel(x, y, image::Rgba([depthu, depthu, depthu, 255]));
 
-                let r = (r as f32 / 255.0) * (occ as f32 / 155.0 * depth as f32 / 255.0).min(1.0);
-                let g = (g as f32 / 255.0) * (occ as f32 / 155.0 * depth as f32 / 255.0).min(1.0);
-                let b = (b as f32 / 255.0) * (occ as f32 / 155.0 * depth as f32 / 255.0).min(1.0);
-                let r = (r * 255.0).round() as u8;
-                let g = (g * 255.0).round() as u8;
-                let b = (b * 255.0).round() as u8;
+                let occl = occl.powf(3.0);
+                let r = ((r as f64 / 255.0) * occl).min(1.0);
+                let g = ((g as f64 / 255.0) * occl).min(1.0);
+                let b = ((b as f64 / 255.0) * occl).min(1.0);
+
+                let depth = 1.0 - (depth / 30.0).min(1.0);
+                let r = r * depth;
+                let g = g * depth;
+                let b = b * depth;
+                let mut r = (r * 255.0).round() as u8;
+                let mut g = (g * 255.0).round() as u8;
+                let mut b = (b * 255.0).round() as u8;
+                if or == 0.0 && og == 0.0 && ob == 0.0 {
+                    r = (mind_powed * 255.0).round() as u8;
+                    g = (mind_powed * 255.0).round() as u8;
+                    b = (mind_powed * 255.0).round() as u8;
+                }
                 image.put_pixel(x, y, image::Rgba([r, g, b, 255]));
             }
         }
 
         image.save(format!("{}/final.png", dir_name)).unwrap();
         colours.save(format!("{}/colours.png", dir_name)).unwrap();
-        ambient.save(format!("{}/ambient.png", dir_name)).unwrap();
+        ambient.save(format!("{}/steps.png", dir_name)).unwrap();
         depthi.save(format!("{}/depth.png", dir_name)).unwrap();
+        m.save(format!("{}/min_distance.png", dir_name)).unwrap();
     }
 }
 
@@ -201,7 +218,7 @@ impl Render {
 #[derive(Clone, Copy, Debug)]
 pub enum Operation {
     Union,
-    SmoothUnion(f32),
+    SmoothUnion(f64),
     Intersection,
 }
 
@@ -228,15 +245,16 @@ pub struct Scene {
 #[derive(Clone, Debug)]
 
 pub struct RenderImage {
-    pub pixels: Vec<Vec<(f32, f32, f32, f32)>>,
+    pub pixels: Vec<Vec<(f64, f64, f64, f64)>>,
 }
 
 #[derive(Clone, Debug)]
 
 pub struct Render {
-    pub colour: Vec<Vec<(f32, f32, f32, f32)>>,
-    pub occlusion: Vec<Vec<f32>>,
-    pub depth: Vec<Vec<f32>>,
+    pub colour: Vec<Vec<(f64, f64, f64, f64)>>,
+    pub steps: Vec<Vec<f64>>,
+    pub depth: Vec<Vec<f64>>,
+    pub min_distance: Vec<Vec<f64>>,
 }
 
 impl Scene {
@@ -250,7 +268,7 @@ impl Scene {
                 Vec3::new(0.0, 0.0, 0.0),
                 Vec3::new(0.0, 0.0, -1.0),
                 Vec3::new(0.0, 1.0, 0.0),
-                90.0,
+                (45.0_f64).to_radians(),
                 16.0 / 9.0,
             ),
             scene: TreeNode::Leaf(Object::new(
@@ -262,11 +280,11 @@ impl Scene {
         }
     }
 
-    pub fn distance(&self, point: Vec3) -> f32 {
+    pub fn distance(&self, point: Vec3) -> f64 {
         self.distance_recursive(&self.scene, point)
     }
 
-    fn distance_recursive(&self, node: &TreeNode, point: Vec3) -> f32 {
+    fn distance_recursive(&self, node: &TreeNode, point: Vec3) -> f64 {
         match node {
             TreeNode::Leaf(object) => object.distance(point),
             TreeNode::Node(tree) => {
@@ -286,11 +304,11 @@ impl Scene {
         }
     }
 
-    pub fn distance_and_colour(&self, point: Vec3) -> (f32, Vec3) {
+    pub fn distance_and_colour(&self, point: Vec3) -> (f64, Vec3) {
         self.distance_and_colour_recursive(&self.scene, point)
     }
 
-    fn distance_and_colour_recursive(&self, node: &TreeNode, point: Vec3) -> (f32, Vec3) {
+    fn distance_and_colour_recursive(&self, node: &TreeNode, point: Vec3) -> (f64, Vec3) {
         match node {
             TreeNode::Leaf(object) => {
                 let dist = object.distance((object.vertex_shader)(point));
@@ -343,17 +361,19 @@ impl Scene {
         let mut colours = vec![vec![(0.0, 0.0, 0.0, 1.0); width as usize]; height as usize];
         let mut occl = vec![vec![0.0; width as usize]; height as usize];
         let mut depth = vec![vec![0.0; width as usize]; height as usize];
+        let mut min_distances = vec![vec![100000.0; width as usize]; height as usize];
 
         for py in 0..height {
             for px in 0..width {
-                let x = px as f32 / width as f32;
-                let y = py as f32 / height as f32;
+                let x = px as f64 / width as f64;
+                let y = py as f64 / height as f64;
 
                 let ray = self.camera.ray(x, y);
                 let mut t = 0.0;
                 let mut distance = 100000.0;
                 let mut colour = Vec3::new(0.0, 0.0, 0.0);
                 let mut total_distance = 0.0;
+                let mut min_distance = 100000.0f64;
                 let mut iterations = 0;
                 for _ in 0..500 {
                     distance = 500000.0;
@@ -364,19 +384,20 @@ impl Scene {
                     t += distance;
                     iterations += 1;
                     total_distance += distance;
+                    min_distance = min_distance.min(distance);
                     if distance < 0.001 || distance > 1000.0 {
                         break;
                     }
                 }
 
-                let occ = 1.0 - (iterations as f32 / 32.0).min(1.0);
+                let occ = 1.0 - (iterations as f64 / 500.0).min(1.0);
                 let colour = if distance < 0.001 {
                     colour
                 } else {
                     Vec3::new(0.0, 0.0, 0.0)
                 };
                 let colour = (colour.x, colour.y, colour.z, 1.0);
-
+                min_distances[py as usize][px as usize] = min_distance;
                 colours[py as usize][px as usize] = colour;
                 occl[py as usize][px as usize] = occ;
                 depth[py as usize][px as usize] = total_distance;
@@ -385,8 +406,9 @@ impl Scene {
 
         Render {
             colour: colours,
-            occlusion: occl,
+            steps: occl,
             depth,
+            min_distance: min_distances,
         }
     }
 }

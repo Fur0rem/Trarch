@@ -1,13 +1,13 @@
 #[derive(Clone, Copy, Debug)]
 pub struct Quat {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
-    pub w: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
+    pub w: f64,
 }
 
 impl Quat {
-    pub fn from_axis_angle(axis: Vec3, angle: f32) -> Quat {
+    pub fn from_axis_angle(axis: Vec3, angle: f64) -> Quat {
         let half_angle = angle / 2.0;
         let s = half_angle.sin();
         Quat {
@@ -57,15 +57,15 @@ impl Quat {
         }
     }
 
-    pub fn rot_y(angle: f32) -> Quat {
+    pub fn rot_y(angle: f64) -> Quat {
         Quat::from_axis_angle(Vec3::new(0.0, 1.0, 0.0), angle)
     }
 
-    pub fn rot_z(angle: f32) -> Quat {
+    pub fn rot_z(angle: f64) -> Quat {
         Quat::from_axis_angle(Vec3::new(0.0, 0.0, 1.0), angle)
     }
 
-    pub fn rot_x(angle: f32) -> Quat {
+    pub fn rot_x(angle: f64) -> Quat {
         Quat::from_axis_angle(Vec3::new(1.0, 0.0, 0.0), angle)
     }
 }
@@ -85,17 +85,17 @@ impl std::ops::Mul for Quat {
 
 #[derive(Clone, Copy, Debug)]
 pub struct Vec3 {
-    pub x: f32,
-    pub y: f32,
-    pub z: f32,
+    pub x: f64,
+    pub y: f64,
+    pub z: f64,
 }
 
 impl Vec3 {
-    pub fn new(x: f32, y: f32, z: f32) -> Vec3 {
+    pub fn new(x: f64, y: f64, z: f64) -> Vec3 {
         Vec3 { x, y, z }
     }
 
-    pub fn dot(&self, other: Vec3) -> f32 {
+    pub fn dot(&self, other: Vec3) -> f64 {
         self.x * other.x + self.y * other.y + self.z * other.z
     }
 
@@ -116,18 +116,18 @@ impl Vec3 {
         }
     }
 
-    pub fn length(&self) -> f32 {
+    pub fn length(&self) -> f64 {
         (self.x * self.x + self.y * self.y + self.z * self.z).sqrt()
     }
 
-    pub fn distance(&self, other: Vec3) -> f32 {
+    pub fn distance(&self, other: Vec3) -> f64 {
         ((self.x - other.x) * (self.x - other.x)
             + (self.y - other.y) * (self.y - other.y)
             + (self.z - other.z) * (self.z - other.z))
             .sqrt()
     }
 
-    pub fn lerp(&self, other: Vec3, t: f32) -> Vec3 {
+    pub fn lerp(&self, other: Vec3, t: f64) -> Vec3 {
         Vec3 {
             x: self.x + (other.x - self.x) * t,
             y: self.y + (other.y - self.y) * t,
@@ -156,10 +156,10 @@ impl std::ops::Add for Vec3 {
     }
 }
 
-impl std::ops::Add<f32> for Vec3 {
+impl std::ops::Add<f64> for Vec3 {
     type Output = Vec3;
 
-    fn add(self, scalar: f32) -> Vec3 {
+    fn add(self, scalar: f64) -> Vec3 {
         Vec3 {
             x: self.x + scalar,
             y: self.y + scalar,
@@ -180,10 +180,10 @@ impl std::ops::Sub for Vec3 {
     }
 }
 
-impl std::ops::Sub<f32> for Vec3 {
+impl std::ops::Sub<f64> for Vec3 {
     type Output = Vec3;
 
-    fn sub(self, scalar: f32) -> Vec3 {
+    fn sub(self, scalar: f64) -> Vec3 {
         Vec3 {
             x: self.x - scalar,
             y: self.y - scalar,
@@ -192,10 +192,10 @@ impl std::ops::Sub<f32> for Vec3 {
     }
 }
 
-impl std::ops::Mul<f32> for Vec3 {
+impl std::ops::Mul<f64> for Vec3 {
     type Output = Vec3;
 
-    fn mul(self, scalar: f32) -> Vec3 {
+    fn mul(self, scalar: f64) -> Vec3 {
         Vec3 {
             x: self.x * scalar,
             y: self.y * scalar,
@@ -216,10 +216,10 @@ impl std::ops::Mul<Vec3> for Vec3 {
     }
 }
 
-impl std::ops::Div<f32> for Vec3 {
+impl std::ops::Div<f64> for Vec3 {
     type Output = Vec3;
 
-    fn div(self, scalar: f32) -> Vec3 {
+    fn div(self, scalar: f64) -> Vec3 {
         Vec3 {
             x: self.x / scalar,
             y: self.y / scalar,
@@ -272,8 +272,8 @@ impl std::ops::SubAssign for Vec3 {
     }
 }
 
-impl std::ops::MulAssign<f32> for Vec3 {
-    fn mul_assign(&mut self, scalar: f32) {
+impl std::ops::MulAssign<f64> for Vec3 {
+    fn mul_assign(&mut self, scalar: f64) {
         *self = Vec3 {
             x: self.x * scalar,
             y: self.y * scalar,
@@ -282,8 +282,8 @@ impl std::ops::MulAssign<f32> for Vec3 {
     }
 }
 
-impl std::ops::DivAssign<f32> for Vec3 {
-    fn div_assign(&mut self, scalar: f32) {
+impl std::ops::DivAssign<f64> for Vec3 {
+    fn div_assign(&mut self, scalar: f64) {
         *self = Vec3 {
             x: self.x / scalar,
             y: self.y / scalar,
@@ -309,7 +309,7 @@ impl Vec3 {
         }
     }
 
-    pub fn max_element(&self) -> f32 {
+    pub fn max_element(&self) -> f64 {
         self.x.max(self.y).max(self.z)
     }
 }
