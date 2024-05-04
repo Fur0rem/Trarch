@@ -58,20 +58,27 @@ fn main() {
     println!("{scene:?}");
 
     let mut scene = Scene::empty();
+    let mut object1 = Object::new(
+        Vec3::new(-1.0, 0.0, -4.0),
+        Quat::identity(),
+        Vec3::new(1.0, 1.0, 1.0),
+        Shape::Sphere,
+    );
+    object1.fragment_shader = Rc::new(|point| Vec3::new(1.0, 0.0, 0.0));
+
+    let mut object2 = Object::new(
+        Vec3::new(1.0, 0.0, -4.0),
+        Quat::rot_y(0.5),
+        Vec3::new(1.0, 2.0, 1.0),
+        Shape::Cube,
+    );
+    object2.set_inflate(0.1);
+    object2.fragment_shader = Rc::new(|point| Vec3::new(0.0, 1.0, 0.0));
+
     scene.scene = TreeNode::Node(ObjectTree {
-        operation: scene::Operation::SmoothUnion(1.0),
-        left: Box::new(TreeNode::Leaf(Object::new(
-            Vec3::new(-1.0, 0.0, -4.0),
-            Quat::identity(),
-            Vec3::new(1.0, 1.0, 1.0),
-            Shape::Sphere,
-        ))),
-        right: Box::new(TreeNode::Leaf(Object::new(
-            Vec3::new(1.0, 0.0, -4.0),
-            Quat::rot_y(0.5),
-            Vec3::new(1.0, 2.0, 1.0),
-            Shape::Cube,
-        ))),
+        operation: scene::Operation::SmoothUnion(2.0),
+        left: Box::new(TreeNode::Leaf(object1)),
+        right: Box::new(TreeNode::Leaf(object2)),
     });
 
     scene.camera.set_aspect_ratio(WIDTH, HEIGHT);

@@ -99,23 +99,6 @@ impl Scene {
 }*/
 
 impl Render {
-    pub fn to_ppm(&self, width: u32, height: u32) -> String {
-        let mut ppm = format!("P3\n{} {}\n255\n", width, height);
-
-        for x in 0..width {
-            for y in 0..height {
-                let (r, g, b, _) = self.colour[y as usize][x as usize];
-                let o = self.steps[y as usize][x as usize];
-                let r = (r * o * 255.0).round() as u8;
-                let g = (g * o * 255.0).round() as u8;
-                let b = (b * o * 255.0).round() as u8;
-                ppm.push_str(&format!("{} {} {}\n", r, g, b));
-            }
-        }
-
-        ppm
-    }
-
     pub fn to_png(&self, width: u32, height: u32, dir_name: &str) {
         std::fs::create_dir_all(dir_name).unwrap();
 
@@ -136,7 +119,7 @@ impl Render {
                 let g = (og * 255.0).round() as u8;
                 let b = (ob * 255.0).round() as u8;
                 let occ = (occl * 255.0).round() as u8;
-                let depthu = 255 - (depth / 10.0 * 255.0).round() as u8;
+                let depthu: u8 = 255 - (depth / 10.0 * 255.0).round() as u8;
                 let mind_powed = (1.0 - mind).powf(25.0);
                 //println!("{}", mind);
                 let mind = 255 - (mind * 255.0).min(255.0).round() as u8;
@@ -330,14 +313,33 @@ impl Scene {
                             (right_dist, right_col)
                         }
                     }
+                    /*Operation::SmoothUnion(k) => {
+                        let h = (k - (left_dist - right_dist).abs()).max(0.0) / k;
+                        let new_min = left_dist.min(right_dist) - h * h * k * (1.0 / 5.0);
+                        //mix between the two colours
+                        let how_close_to_left =
+                            (left_dist - new_min) / (left_dist - right_dist).abs();
+                        //println!("{}", how_close_to_left);
+                        let how_close_to_right = 1.0 - how_close_to_left;
+                        let col = left_col * how_close_to_left + right_col * how_close_to_right;
+
+                        (new_min, col)
+                    }*/
                     Operation::SmoothUnion(k) => {
                         let h = (k - (left_dist - right_dist).abs()).max(0.0) / k;
                         let new_min = left_dist.min(right_dist) - h * h * k * (1.0 / 5.0);
-                        if left_dist < right_dist {
-                            (new_min, left_col)
-                        } else {
-                            (new_min, right_col)
-                        }
+                        //mix between the two colours
+                        let how_close_to_left =
+                            (left_dist - new_min) / (left_dist - right_dist).abs();
+                        //println!("{}", how_close_to_left);
+                        let how_close_to_right = 1.0 - how_close_to_left;
+
+                        // mix between the two colours with k as the factor
+                        let mean_col = (left_col + right_col) / 2.0;
+                        let col = left_col * how_close_to_right + right_col * how_close_to_left;
+                        let col = mean_col * (h) + col * (1.0 - h);
+
+                        (new_min, col)
                     }
                     Operation::Intersection => {
                         if left_dist > right_dist {
@@ -359,6 +361,10 @@ impl Scene {
         });
     }
 
+    pub fn set_first_object(&mut self, object: Object) {
+        self.scene = TreeNode::Leaf(object);
+    }
+
     pub fn render(&self, width: u32, height: u32) -> Render {
         let mut colours = vec![vec![(0.0, 0.0, 0.0, 1.0); width as usize]; height as usize];
         let mut occl = vec![vec![0.0; width as usize]; height as usize];
@@ -378,7 +384,6 @@ impl Scene {
                 let mut min_distance = 100000.0f64;
                 let mut iterations = 0;
                 for _ in 0..500 {
-                    distance = 500000.0;
                     let point = ray.point(t);
                     let (d, col) = self.distance_and_colour(point);
                     colour = col;
