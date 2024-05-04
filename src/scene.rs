@@ -138,7 +138,9 @@ impl Render {
                 let occ = (occl * 255.0).round() as u8;
                 let depthu = 255 - (depth / 10.0 * 255.0).round() as u8;
                 let mind_powed = (1.0 - mind).powf(25.0);
-                let mind = 255 - (mind / 5.0 * 205.0).round() as u8;
+                //println!("{}", mind);
+                let mind = 255 - (mind * 255.0).min(255.0).round() as u8;
+                //println!("{}", mind);
 
                 m.put_pixel(x, y, image::Rgba([mind, mind, mind, 255]));
                 colours.put_pixel(x, y, image::Rgba([r, g, b, 255]));
