@@ -49,7 +49,10 @@ impl Camera {
     pub fn ray(&self, x: f64, y: f64) -> Ray {
         let x = 0.5 * (2.0 * x - 1.0) * self.aspect_ratio * self.fov.tan();
         let y = 0.5 * (1.0 - 2.0 * y) * self.fov.tan();
-        Ray::new(self.position, self.direction + self.right * x + self.up * y)
+        Ray::new(
+            self.position,
+            (self.direction + self.right * x + self.up * y).normalize(),
+        )
     }
 
     pub fn rotate(&mut self, yaw: f64, pitch: f64) {
