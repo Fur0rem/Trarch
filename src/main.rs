@@ -76,7 +76,7 @@ fn main() {
     object2.fragment_shader = Rc::new(|point| Vec3::new(0.0, 1.0, 0.0));
 
     scene.scene = TreeNode::Node(ObjectTree {
-        operation: scene::Operation::SmoothUnion(2.0),
+        operation: scene::Operation::SmoothUnion(0.5),
         left: Box::new(TreeNode::Leaf(object1)),
         right: Box::new(TreeNode::Leaf(object2)),
     });

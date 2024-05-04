@@ -330,7 +330,7 @@ impl Scene {
                         let new_min = left_dist.min(right_dist) - h * h * k * (1.0 / 5.0);
                         //mix between the two colours
 
-                        let mean_col = (left_col + right_col) / 2.0;
+                        /*let mean_col = (left_col + right_col) / 2.0;
 
                         let how_close_to_left =
                             ((left_dist - new_min) / (left_dist - right_dist).abs()).min(1.0);
@@ -347,7 +347,20 @@ impl Scene {
                         let col = left_col * how_close_to_right + right_col * how_close_to_left;
                         let col = mean_col * (h) + col * (1.0 - h);
 
-                        (new_min, col)
+                        (new_min, col)*/
+
+                        let diff = left_dist - right_dist;
+                        if diff.abs() < 0.01 {
+                            let mean_col = (left_col + right_col) / 2.0;
+                            return (new_min, mean_col);
+                        } else {
+                            let how_close_to_left = (diff / diff.abs()).min(1.0);
+                            let how_close_to_right = 1.0 - how_close_to_left;
+                            let col = left_col * how_close_to_right + right_col * how_close_to_left;
+                            let mean_col = (left_col + right_col) / 2.0;
+                            let col = mean_col * (h) + col * (1.0 - h);
+                            (new_min, col)
+                        }
                     }
                     Operation::Intersection => {
                         if left_dist > right_dist {
