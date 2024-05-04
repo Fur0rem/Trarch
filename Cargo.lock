@@ -794,6 +794,13 @@ dependencies = [
 ]
 
 [[package]]
+name = "surplace"
+version = "0.1.0"
+dependencies = [
+ "image",
+]
+
+[[package]]
 name = "syn"
 version = "2.0.60"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -886,13 +893,6 @@ dependencies = [
  "serde_spanned",
  "toml_datetime",
  "winnow",
-]
-
-[[package]]
-name = "trarch"
-version = "0.1.0"
-dependencies = [
- "image",
 ]
 
 [[package]]
