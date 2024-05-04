@@ -350,7 +350,7 @@ impl Scene {
                         (new_min, col)*/
 
                         let diff = left_dist - right_dist;
-                        if diff.abs() < 0.01 {
+                        if diff.abs() < 0.001 {
                             let mean_col = (left_col + right_col) / 2.0;
                             return (new_min, mean_col);
                         } else {
