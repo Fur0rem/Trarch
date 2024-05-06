@@ -26,7 +26,7 @@ fn main() {
         Shape::Sphere,
     );
     object1.fragment_shader = Rc::new(|point| Vec3::new(1.0, 0.0, 0.0));
-    scene.add_object(object1);
+    scene.set_first_object(object1);
 
     let mut object2 = Object::new(
         Vec3::new(3.0, 0.0, -4.0),

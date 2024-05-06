@@ -463,6 +463,8 @@ impl Scene {
         let mut min_distances = vec![vec![100000.0; width as usize]; height as usize];
         let mut normals = vec![vec![Vec3::new(0.0, 0.0, 0.0); width as usize]; height as usize];
 
+        let mut worst_time = std::time::Duration::new(0, 0);
+        let mut average_time = std::time::Duration::new(0, 0);
         for py in 0..height {
             for px in 0..width {
                 let x = px as f64 / width as f64;
@@ -504,6 +506,7 @@ impl Scene {
                 occl[py as usize][px as usize] = occ;
                 depth[py as usize][px as usize] = total_distance;*/
 
+                let start = std::time::Instant::now();
                 let ray = self.camera.ray(x, y);
                 let hit = ray_march(self, ray);
                 let bounce = if hit.did_hit {
@@ -552,6 +555,9 @@ impl Scene {
                     hit.colour
                 };*/
                 let normal = self.get_normals(ray.point(hit.total_distance));
+                let end = start.elapsed();
+                worst_time = worst_time.max(end);
+                average_time += end;
                 normals[py as usize][px as usize] = normal;
                 min_distances[py as usize][px as usize] = hit.min_distance;
                 colours[py as usize][px as usize] = colour;
@@ -559,6 +565,9 @@ impl Scene {
                 depth[py as usize][px as usize] = hit.total_distance;
             }
         }
+
+        println!("Worst time: {:?}", worst_time);
+        println!("Average time: {:?}", average_time / (width * height));
 
         Render {
             colour: colours,

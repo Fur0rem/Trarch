@@ -2,4 +2,4 @@ Ray marcher project
 
 # Fixes to do:
 Stereographic projection
-Glow not scaling with object scale
+Distance not scaling correctly with object scale
