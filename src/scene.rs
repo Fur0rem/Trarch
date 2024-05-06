@@ -398,16 +398,20 @@ impl Scene {
     }
 
     pub fn get_normals(&self, point: Vec3) -> Vec3 {
-        const EPS: f64 = 0.001;
-        let x = Vec3::new(EPS, 0.0, 0.0);
-        let y = Vec3::new(0.0, EPS, 0.0);
-        let z = Vec3::new(0.0, 0.0, EPS);
+        const EPS: f64 = 0.1;
+        let px = Vec3::new(EPS, 0.0, 0.0);
+        let py = Vec3::new(0.0, EPS, 0.0);
+        let pz = Vec3::new(0.0, 0.0, EPS);
+        let nx = Vec3::new(-EPS, 0.0, 0.0);
+        let ny = Vec3::new(0.0, -EPS, 0.0);
+        let nz = Vec3::new(0.0, 0.0, -EPS);
 
-        let dx = self.distance(point + x) - self.distance(point - x);
-        let dy = self.distance(point + y) - self.distance(point - y);
-        let dz = self.distance(point + z) - self.distance(point - z);
-
-        Vec3::new(dx, dy, dz).normalize()
+        return Vec3::new(
+            self.distance_and_colour(point + px).0 - self.distance_and_colour(point + nx).0,
+            self.distance_and_colour(point + py).0 - self.distance_and_colour(point + ny).0,
+            self.distance_and_colour(point + pz).0 - self.distance_and_colour(point + nz).0,
+        )
+        .normalize();
     }
 
     pub fn render(&self, width: u32, height: u32) -> Render {
