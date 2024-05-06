@@ -107,6 +107,7 @@ impl Render {
         let mut ambient = RgbaImage::new(width, height);
         let mut depthi = RgbaImage::new(width, height);
         let mut m = RgbaImage::new(width, height);
+        let mut normals = RgbaImage::new(width, height);
 
         for x in 0..width {
             for y in 0..height {
@@ -123,6 +124,14 @@ impl Render {
                 let mind_powed = (1.0 - mind).powf(25.0);
                 //println!("{}", mind);
                 let mind = 255 - (mind * 255.0).min(255.0).round() as u8;
+
+                let nr = self.normals[y as usize][x as usize].x;
+                let ng = self.normals[y as usize][x as usize].y;
+                let nb = self.normals[y as usize][x as usize].z;
+                let nr = ((nr + 1.0) / 2.0 * 255.0).round() as u8;
+                let ng = ((ng + 1.0) / 2.0 * 255.0).round() as u8;
+                let nb = ((nb + 1.0) / 2.0 * 255.0).round() as u8;
+                normals.put_pixel(x, y, image::Rgba([nr, ng, nb, 255]));
                 //println!("{}", mind);
 
                 m.put_pixel(x, y, image::Rgba([mind, mind, mind, 255]));
@@ -156,6 +165,7 @@ impl Render {
         ambient.save(format!("{}/steps.png", dir_name)).unwrap();
         depthi.save(format!("{}/depth.png", dir_name)).unwrap();
         m.save(format!("{}/min_distance.png", dir_name)).unwrap();
+        normals.save(format!("{}/normals.png", dir_name)).unwrap();
     }
 }
 
@@ -240,6 +250,7 @@ pub struct Render {
     pub steps: Vec<Vec<f64>>,
     pub depth: Vec<Vec<f64>>,
     pub min_distance: Vec<Vec<f64>>,
+    pub normals: Vec<Vec<Vec3>>,
 }
 
 impl Scene {
@@ -386,11 +397,25 @@ impl Scene {
         self.scene = TreeNode::Leaf(object);
     }
 
+    pub fn get_normals(&self, point: Vec3) -> Vec3 {
+        const EPS: f64 = 0.001;
+        let x = Vec3::new(EPS, 0.0, 0.0);
+        let y = Vec3::new(0.0, EPS, 0.0);
+        let z = Vec3::new(0.0, 0.0, EPS);
+
+        let dx = self.distance(point + x) - self.distance(point - x);
+        let dy = self.distance(point + y) - self.distance(point - y);
+        let dz = self.distance(point + z) - self.distance(point - z);
+
+        Vec3::new(dx, dy, dz).normalize()
+    }
+
     pub fn render(&self, width: u32, height: u32) -> Render {
         let mut colours = vec![vec![(0.0, 0.0, 0.0, 1.0); width as usize]; height as usize];
         let mut occl = vec![vec![0.0; width as usize]; height as usize];
         let mut depth = vec![vec![0.0; width as usize]; height as usize];
         let mut min_distances = vec![vec![100000.0; width as usize]; height as usize];
+        let mut normals = vec![vec![Vec3::new(0.0, 0.0, 0.0); width as usize]; height as usize];
 
         for py in 0..height {
             for px in 0..width {
@@ -418,6 +443,9 @@ impl Scene {
                     }
                 }
 
+                let normal = self.get_normals(ray.point(t));
+                normals[py as usize][px as usize] = normal;
+
                 let occ = 1.0 - (iterations as f64 / 500.0).min(1.0);
                 let colour = if distance < 0.001 {
                     colour
@@ -437,6 +465,7 @@ impl Scene {
             steps: occl,
             depth,
             min_distance: min_distances,
+            normals,
         }
     }
 }
