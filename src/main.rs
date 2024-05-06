@@ -43,13 +43,13 @@ fn main() {
         Quat::rot_x(0.5),
         Vec3::new(1.0, 1.0, 1.0),
         Shape::Mandelbulb {
-            iterations: 20,
+            iterations: 10,
             power: 8.0,
         },
     );
     object3.fragment_shader =
         Rc::new(|point| Vec3::new(0.4 * (5.0 * point.x).sin().min(1.0).max(0.0), 0.0, 1.0));
-    object3.set_inflate(0.00);
+    object3.set_inflate(0.001);
     scene.add_object(object3);
 
     scene.camera.rotate(0.0, 0.0);
@@ -115,4 +115,29 @@ fn main() {
     scene.camera.rotate(0.0, 0.0);
     let render = scene.render(WIDTH, HEIGHT);
     render.to_png(WIDTH, HEIGHT, "renders/output3");
+
+    let mut scene = Scene::empty();
+    let mut object1 = Object::new(
+        Vec3::new(-1.0, 0.0, -4.0),
+        Quat::identity(),
+        Vec3::new(1.0, 1.0, 1.0),
+        Shape::Sphere,
+    );
+    object1.fragment_shader = Rc::new(|point| Vec3::new(1.0, 0.0, 0.0));
+    scene.set_first_object(object1);
+
+    let mut object2 = Object::new(
+        Vec3::new(1.0, 0.0, -4.0),
+        Quat::rot_y(0.5),
+        Vec3::new(1.0, 1.0, 1.0),
+        Shape::Sphere,
+    );
+    object2.fragment_shader = Rc::new(|point| Vec3::new(0.0, 0.0, 1.0));
+    scene.add_object(object2);
+
+    scene.camera.set_aspect_ratio(WIDTH, HEIGHT);
+    scene.camera.position = Vec3::new(0.0, 0.0, 1.0);
+    scene.camera.rotate(0.0, 0.0);
+    let render = scene.render(WIDTH, HEIGHT);
+    render.to_png(WIDTH, HEIGHT, "renders/output4");
 }

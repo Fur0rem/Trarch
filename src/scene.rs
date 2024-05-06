@@ -1,6 +1,6 @@
 //! A scene is a collection of shapes and a camera.
 
-use crate::camera::Camera;
+use crate::camera::{Camera, Ray};
 use crate::math::{Quat, Vec3};
 use crate::shape::{Object, Shape};
 
@@ -111,7 +111,7 @@ impl Render {
 
         for x in 0..width {
             for y in 0..height {
-                let (or, og, ob, _) = self.colour[y as usize][x as usize];
+                let (or, og, ob, oa) = self.colour[y as usize][x as usize];
                 let occl = self.steps[y as usize][x as usize];
                 let depth = self.depth[y as usize][x as usize];
                 let mind = self.min_distance[y as usize][x as usize];
@@ -135,7 +135,16 @@ impl Render {
                 //println!("{}", mind);
 
                 m.put_pixel(x, y, image::Rgba([mind, mind, mind, 255]));
-                colours.put_pixel(x, y, image::Rgba([r, g, b, 255]));
+                colours.put_pixel(
+                    x,
+                    y,
+                    image::Rgba([
+                        r,
+                        g,
+                        b,
+                        (self.colour[y as usize][x as usize].3 * 255.0) as u8,
+                    ]),
+                );
                 ambient.put_pixel(x, y, image::Rgba([occ, occ, occ, 255]));
                 depthi.put_pixel(x, y, image::Rgba([depthu, depthu, depthu, 255]));
 
@@ -251,6 +260,45 @@ pub struct Render {
     pub depth: Vec<Vec<f64>>,
     pub min_distance: Vec<Vec<f64>>,
     pub normals: Vec<Vec<Vec3>>,
+}
+
+pub struct Hit {
+    pub did_hit: bool,
+    pub min_distance: f64,
+    pub colour: Vec3,
+    pub iterations: u32,
+    pub total_distance: f64,
+}
+
+pub fn ray_march(scene: &Scene, ray: Ray) -> Hit {
+    let mut t = 0.0;
+    let mut distance = 100000.0;
+    let mut colour = Vec3::new(0.0, 0.0, 0.0);
+    let mut total_distance = 0.0;
+    let mut min_distance = 100000.0f64;
+    let mut iterations = 0;
+    for _ in 0..500 {
+        let point = ray.point(t);
+        let (d, col) = scene.distance_and_colour(point);
+        colour = col;
+        distance = d;
+        t += distance;
+        iterations += 1;
+        total_distance += distance;
+        min_distance = min_distance.min(distance);
+        if distance < 0.001 || distance > 1000.0 {
+            break;
+        }
+    }
+
+    let hit = Hit {
+        did_hit: distance < 0.0011,
+        min_distance,
+        colour,
+        iterations,
+        total_distance,
+    };
+    hit
 }
 
 impl Scene {
@@ -398,20 +446,14 @@ impl Scene {
     }
 
     pub fn get_normals(&self, point: Vec3) -> Vec3 {
-        const EPS: f64 = 0.1;
-        let px = Vec3::new(EPS, 0.0, 0.0);
-        let py = Vec3::new(0.0, EPS, 0.0);
-        let pz = Vec3::new(0.0, 0.0, EPS);
-        let nx = Vec3::new(-EPS, 0.0, 0.0);
-        let ny = Vec3::new(0.0, -EPS, 0.0);
-        let nz = Vec3::new(0.0, 0.0, -EPS);
-
-        return Vec3::new(
-            self.distance_and_colour(point + px).0 - self.distance_and_colour(point + nx).0,
-            self.distance_and_colour(point + py).0 - self.distance_and_colour(point + ny).0,
-            self.distance_and_colour(point + pz).0 - self.distance_and_colour(point + nz).0,
-        )
-        .normalize();
+        const EPS: f64 = 0.001;
+        let x = self.distance(Vec3::new(point.x + EPS, point.y, point.z))
+            - self.distance(Vec3::new(point.x - EPS, point.y, point.z));
+        let y = self.distance(Vec3::new(point.x, point.y + EPS, point.z))
+            - self.distance(Vec3::new(point.x, point.y - EPS, point.z));
+        let z = self.distance(Vec3::new(point.x, point.y, point.z + EPS))
+            - self.distance(Vec3::new(point.x, point.y, point.z - EPS));
+        Vec3::new(x, y, z).normalize()
     }
 
     pub fn render(&self, width: u32, height: u32) -> Render {
@@ -426,7 +468,7 @@ impl Scene {
                 let x = px as f64 / width as f64;
                 let y = py as f64 / height as f64;
 
-                let ray = self.camera.ray(x, y);
+                /*let ray = self.camera.ray(x, y);
                 let mut t = 0.0;
                 let mut distance = 100000.0;
                 let mut colour = Vec3::new(0.0, 0.0, 0.0);
@@ -460,7 +502,61 @@ impl Scene {
                 min_distances[py as usize][px as usize] = min_distance;
                 colours[py as usize][px as usize] = colour;
                 occl[py as usize][px as usize] = occ;
-                depth[py as usize][px as usize] = total_distance;
+                depth[py as usize][px as usize] = total_distance;*/
+
+                let ray = self.camera.ray(x, y);
+                let hit = ray_march(self, ray);
+                let bounce = if hit.did_hit {
+                    let normal = self.get_normals(ray.point(hit.total_distance));
+                    let bounce = ray.direction - normal * 2.0 * ray.direction.dot(normal);
+                    Some(ray_march(
+                        self,
+                        Ray::new(ray.point(hit.total_distance) + bounce * 0.01, bounce),
+                    ))
+                } else {
+                    None
+                };
+                let occ = 1.0 - (hit.iterations as f64 / 500.0).min(1.0);
+                let colour = if let Some(bounce) = bounce {
+                    if bounce.did_hit {
+                        let bounce = bounce.colour;
+                        let hit = hit.colour;
+                        const PROPORTION: f64 = 0.5;
+                        let bounce = bounce * PROPORTION;
+                        let hit = hit * (1.0 - PROPORTION);
+                        (
+                            (bounce.x + hit.x).min(1.0),
+                            (bounce.y + hit.y).min(1.0),
+                            (bounce.z + hit.z).min(1.0),
+                            1.0,
+                        )
+                    } else {
+                        (
+                            hit.colour.x,
+                            hit.colour.y,
+                            hit.colour.z,
+                            if hit.did_hit { 1.0 } else { 0.0 },
+                        )
+                    }
+                } else {
+                    (
+                        hit.colour.x,
+                        hit.colour.y,
+                        hit.colour.z,
+                        if hit.did_hit { 1.0 } else { 0.0 },
+                    )
+                };
+                /*let colour = if let Some(bounce) = bounce {
+                    bounce.colour
+                } else {
+                    hit.colour
+                };*/
+                let normal = self.get_normals(ray.point(hit.total_distance));
+                normals[py as usize][px as usize] = normal;
+                min_distances[py as usize][px as usize] = hit.min_distance;
+                colours[py as usize][px as usize] = colour;
+                occl[py as usize][px as usize] = occ;
+                depth[py as usize][px as usize] = hit.total_distance;
             }
         }
 
